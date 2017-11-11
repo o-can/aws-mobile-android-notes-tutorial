@@ -12,6 +12,7 @@
  */
 package com.amazonaws.mobile.samples.mynotes;
 
+import android.content.AsyncQueryHandler;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.database.Cursor;
@@ -19,6 +20,7 @@ import android.net.Uri;
 import android.os.Handler;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -103,14 +105,14 @@ public class NoteDetailFragment extends Fragment {
         if (arguments != null && arguments.containsKey(ARG_ITEM_ID)) {
             String itemId = getArguments().getString(ARG_ITEM_ID);
             itemUri = NotesContentContract.Notes.uriBuilder(itemId);
-            Cursor data = contentResolver.query(itemUri, NotesContentContract.Notes.PROJECTION_ALL, null, null, null);
-            if (data != null) {
-                data.moveToFirst();
-                mItem = Note.fromCursor(data);
-                isUpdate = true;
-            }
+            mItem = new Note();
+            mItem.setNoteId("Loading ...");
+            mItem.setTitle("Loading ...");
+            isUpdate = true;
         } else {
             mItem = new Note();
+            mItem.setTitle("");
+            mItem.setContent("");
             isUpdate = false;
         }
 
@@ -149,11 +151,26 @@ public class NoteDetailFragment extends Fragment {
         // Convert to ContentValues and store in the database.
         if (isUpdated) {
             ContentValues values = mItem.toContentValues();
+            AsyncQueryHandler queryHandler = new AsyncQueryHandler(contentResolver) {
+                @Override
+                protected void onInsertComplete(int token, Object cookie, Uri uri) {
+                    super.onInsertComplete(token, cookie, uri);
+                    itemUri = NotesContentContract.Notes.uriBuilder(mItem.getNoteId());
+                    isUpdate = true;    // Anything from now on is an update
+                    Log.d("NoteDetailFragment", "insert completed");
+                }
+
+                @Override
+                protected void onUpdateComplete(int token, Object cookie, int result) {
+                    super.onUpdateComplete(token, cookie, result);
+                    Log.d("NoteDetailFragment", "update completed");
+                }
+            };
             if (isUpdate) {
-                contentResolver.update(itemUri, values, null, null);
+                queryHandler.startUpdate(1, null, itemUri, values, null, null);
             } else {
-                itemUri = contentResolver.insert(NotesContentContract.Notes.CONTENT_URI, values);
-                isUpdate = true;    // Anything from now on is an update
+                queryHandler.startInsert(1, null, NotesContentContract.Notes.CONTENT_URI, values);
+
 
                 // Send Custom Event to Amazon Pinpoint
                 final AnalyticsClient mgr = AWSProvider.getInstance()
@@ -184,8 +201,28 @@ public class NoteDetailFragment extends Fragment {
         editTitle = (EditText) rootView.findViewById(R.id.edit_title);
         editContent = (EditText) rootView.findViewById(R.id.edit_content);
 
-        editTitle.setText(mItem.getTitle());
-        editContent.setText(mItem.getContent());
+        if(isUpdate) {
+
+            AsyncQueryHandler queryHandler = new AsyncQueryHandler(contentResolver) {
+
+                @Override
+                protected void onQueryComplete(int token, Object cookie, Cursor cursor) {
+                    super.onQueryComplete(token, cookie, cursor);
+                    if (cursor != null) {
+                        cursor.moveToFirst();
+                        mItem = Note.fromCursor(cursor);
+                        isUpdate = true;
+                        editTitle.setText(mItem.getTitle());
+                        editContent.setText(mItem.getContent());
+                    }
+
+                    Log.d("NoteDetailFragment", "query completed");
+                }
+
+            };
+            queryHandler.startQuery(1, null, itemUri, NotesContentContract.Notes.PROJECTION_ALL, null, null, null);
+        }
+
 
         return rootView;
     }

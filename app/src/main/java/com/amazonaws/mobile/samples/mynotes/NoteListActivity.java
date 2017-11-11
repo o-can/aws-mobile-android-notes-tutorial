@@ -13,11 +13,7 @@
 package com.amazonaws.mobile.samples.mynotes;
 
 import android.app.LoaderManager;
-import android.content.ContentResolver;
-import android.content.Context;
-import android.content.CursorLoader;
-import android.content.Intent;
-import android.content.Loader;
+import android.content.*;
 import android.database.Cursor;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -33,6 +29,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -53,8 +50,7 @@ import com.amazonaws.mobileconnectors.pinpoint.analytics.AnalyticsEvent;
  */
 public class NoteListActivity
         extends AppCompatActivity
-        implements LoaderManager.LoaderCallbacks<Cursor>
-{
+        implements LoaderManager.LoaderCallbacks<Cursor> {
     /**
      * The unique identifier for the loader
      */
@@ -78,6 +74,7 @@ public class NoteListActivity
 
     /**
      * Activity lifecycle event handler - called when the activity is first created.
+     *
      * @param savedInstanceState the saved state
      */
     @Override
@@ -169,12 +166,12 @@ public class NoteListActivity
                 int iw = xMark.getIntrinsicWidth();
                 int ih = xMark.getIntrinsicWidth();
 
-                background.setBounds(vr + (int)dX, vt, vr, vb);
+                background.setBounds(vr + (int) dX, vt, vr, vb);
                 background.draw(c);
 
                 int xMarkLeft = vr - xMarkMargin - iw;
                 int xMarkRight = vr - xMarkMargin;
-                int xMarkTop = vt + (vh - ih)/2;
+                int xMarkTop = vt + (vh - ih) / 2;
                 int xMarkBottom = xMarkTop + ih;
                 xMark.setBounds(xMarkLeft, xMarkTop, xMarkRight, xMarkBottom);
                 xMark.draw(c);
@@ -193,7 +190,7 @@ public class NoteListActivity
      * Event handler callback for the loader manager.  Called when creating the loader
      * manager.
      *
-     * @param id The ID - should always be NOTES_LOADER in this edition
+     * @param id   The ID - should always be NOTES_LOADER in this edition
      * @param args any arguments - should always be null in this edition
      * @return the loader
      */
@@ -209,8 +206,9 @@ public class NoteListActivity
 
     /**
      * Event handler callback for the loader manager.  Called when data has finished loading.
+     *
      * @param loader the loader that finished loading
-     * @param data a cursor to the data that was loaded
+     * @param data   a cursor to the data that was loaded
      */
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
@@ -219,6 +217,7 @@ public class NoteListActivity
 
     /**
      * Event handler callback for the loader manager.  Called when the loader is reset.
+     *
      * @param loader the loader that was reset
      */
     @Override
@@ -248,7 +247,8 @@ public class NoteListActivity
         /**
          * The main part of the NotesAdapter - this is called once for each element in the
          * list of data that is returned.
-         * @param holder the ViewHolder (which is a NoteViewHolder) for the record
+         *
+         * @param holder   the ViewHolder (which is a NoteViewHolder) for the record
          * @param position the position in the list.
          */
         @Override
@@ -287,6 +287,7 @@ public class NoteListActivity
 
         /**
          * Used to support the loader framework for loading data
+         *
          * @param cursor the new cursor
          * @return the old cursor
          */
@@ -302,16 +303,10 @@ public class NoteListActivity
             return oldCursor;
         }
 
-        /**
-         * Remove the element in the list.
-         * @param holder the viewholder to delete
-         */
         void remove(final NoteViewHolder holder) {
             if (mTwoPane) {
                 // Check to see if the current fragment is the record we are deleting
-                Fragment currentFragment = NoteListActivity.this
-                        .getSupportFragmentManager()
-                        .findFragmentById(R.id.note_detail_container);
+                Fragment currentFragment = NoteListActivity.this.getSupportFragmentManager().findFragmentById(R.id.note_detail_container);
                 if (currentFragment instanceof NoteDetailFragment) {
                     String deletedNote = holder.getNote().getNoteId();
                     String displayedNote = ((NoteDetailFragment) currentFragment).getNote().getNoteId();
@@ -322,13 +317,16 @@ public class NoteListActivity
             }
 
             // Remove the item from the database
-            ContentResolver resolver = getContentResolver();
-            int position = holder.getAdapterPosition();
-            Uri itemUri = NotesContentContract.Notes.uriBuilder(holder.getNote().getNoteId());
-            int count = resolver.delete(itemUri, null, null);
-            if (count > 0) {
-                notifyItemRemoved(position);
-            }
+            final int position = holder.getAdapterPosition();
+            AsyncQueryHandler queryHandler = new AsyncQueryHandler(getContentResolver()) {
+                @Override
+                protected void onDeleteComplete(int token, Object cookie, int result) {
+                    super.onDeleteComplete(token, cookie, result);
+                    notifyItemRemoved(position);
+                    Log.d("NoteListActivity", "delete completed");
+                }
+            };
+            queryHandler.startDelete(1, null, NotesContentContract.Notes.uriBuilder(holder.getNote().getNoteId()), null, null);
         }
     }
 }
