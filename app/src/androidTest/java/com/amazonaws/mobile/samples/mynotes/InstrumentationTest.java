@@ -2,6 +2,12 @@ package com.amazonaws.mobile.samples.mynotes;
 
 
 import android.support.test.espresso.ViewInteraction;
+import android.support.test.espresso.action.GeneralLocation;
+import android.support.test.espresso.action.GeneralSwipeAction;
+import android.support.test.espresso.action.Press;
+import android.support.test.espresso.action.Swipe;
+import android.support.test.espresso.action.Swiper;
+import android.support.test.espresso.contrib.RecyclerViewActions;
 import android.support.test.rule.ActivityTestRule;
 import android.support.test.runner.AndroidJUnit4;
 import android.test.suitebuilder.annotation.LargeTest;
@@ -24,9 +30,11 @@ import static android.support.test.espresso.Espresso.pressBack;
 import static android.support.test.espresso.action.ViewActions.click;
 import static android.support.test.espresso.action.ViewActions.closeSoftKeyboard;
 import static android.support.test.espresso.action.ViewActions.replaceText;
+import static android.support.test.espresso.action.ViewActions.scrollTo;
 import static android.support.test.espresso.action.ViewActions.swipeLeft;
 import static android.support.test.espresso.assertion.ViewAssertions.doesNotExist;
 import static android.support.test.espresso.assertion.ViewAssertions.matches;
+import static android.support.test.espresso.matcher.ViewMatchers.hasDescendant;
 import static android.support.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static android.support.test.espresso.matcher.ViewMatchers.withClassName;
 import static android.support.test.espresso.matcher.ViewMatchers.withContentDescription;
@@ -46,7 +54,7 @@ public class InstrumentationTest {
     @Test
     public void authenticatorActivityTest() {
         try {
-            Thread.sleep(5000);
+            Thread.sleep(10000);
         }
         catch(Exception e) {
             e.printStackTrace();
@@ -123,18 +131,13 @@ public class InstrumentationTest {
                         isDisplayed()));
         button2.perform(click());
         try {
-            Thread.sleep(5000);
+            Thread.sleep(10000);
         }
         catch(Exception e) {
             e.printStackTrace();
         }
         ViewInteraction imageButton = onView(
                 allOf(withId(R.id.addNoteButton),
-                        childAtPosition(
-                                childAtPosition(
-                                        withId(android.R.id.content),
-                                        0),
-                                2),
                         isDisplayed()));
         imageButton.check(matches(isDisplayed()));
 
@@ -149,11 +152,10 @@ public class InstrumentationTest {
                         isDisplayed()));
         textView4.check(matches(withText("My Notes")));
 
-        ViewInteraction note = onView(
-                allOf(withText("AWS Pop-Up Loft"), isDisplayed()));
-        note.perform(click());
+        onView(withId(R.id.note_list)).perform(RecyclerViewActions.scrollTo(hasDescendant(withText("AWS Pop-Up Loft")))).check(matches(isDisplayed()));
+        onView(withText("AWS Pop-Up Loft")).perform(click());
         try {
-            Thread.sleep(5000);
+            Thread.sleep(10000);
         }
         catch(Exception e) {
             e.printStackTrace();
@@ -173,7 +175,7 @@ public class InstrumentationTest {
         allOf(withText("Welcome!"), isDisplayed());
         backButton.perform(click());
         try {
-            Thread.sleep(5000);
+            Thread.sleep(10000);
         }
         catch(Exception e) {
             e.printStackTrace();
@@ -189,7 +191,7 @@ public class InstrumentationTest {
                         isDisplayed()));
         floatingActionButton.perform(click());
         try {
-            Thread.sleep(5000);
+            Thread.sleep(10000);
         }
         catch(Exception e) {
             e.printStackTrace();
@@ -247,22 +249,22 @@ public class InstrumentationTest {
 
 
         try {
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        ViewInteraction textView5 = onView(withId(R.id.note_list)).perform(RecyclerViewActions.scrollTo(hasDescendant(withText(newTitle)))).check(matches(isDisplayed()));
+
+        onView(allOf(withText(newTitle))).check(matches(isDisplayed()));
+        onView(allOf(withText(newTitle))).perform(new GeneralSwipeAction(Swipe.FAST, GeneralLocation.CENTER, GeneralLocation.CENTER_LEFT,Press.FINGER));
+
+        try {
             Thread.sleep(5000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
-        ViewInteraction textView5 = onView(
-                allOf(withText(newTitle), isDisplayed()));
-        textView5.check(matches(withText(newTitle)));
-        textView5.perform(swipeLeft());
-
-        try {
-            Thread.sleep(2000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        textView5.check(doesNotExist());
+        onView(withText(newTitle)).check(doesNotExist());
 
         try {
             Thread.sleep(2000);
